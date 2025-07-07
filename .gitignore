@@ -5,3 +5,5 @@
 .vscode/launch.json
 .vscode*
 .pio
+.vscode/ipch
+include/config-private.h

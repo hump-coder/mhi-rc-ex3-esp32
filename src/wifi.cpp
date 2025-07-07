@@ -6,6 +6,8 @@
 #include <config.h>
 
 
+#if 0
+
 
 bool shouldSaveConfig = false; 
 
@@ -22,26 +24,26 @@ void lostWifiCallback (const WiFiEventStationModeDisconnected& evt) {
 }
 
 
-bool setupWifi(EspConfig *cfg, bool resetConf) {
+bool setupWifi() {
 
-  WiFiManager wifiManager;
+//  WiFiManager wifiManager;
 
-  if (resetConf)
-    wifiManager.resetSettings();
+///  if (resetConf)
+//  wifiManager.resetSettings();
 
-  WiFi.setHostname(cfg->host_name);
+  WiFi.setHostname(HOSTNAME);
 
-  wifiManager.setAPCallback(configModeCallback);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.setConfigPortalTimeout(180);
+//  wifiManager.setAPCallback(configModeCallback);
+//  wifiManager.setSaveConfigCallback(saveConfigCallback);
+//  wifiManager.setConfigPortalTimeout(180);
 
-  WiFiManagerParameter custom_hostname("hostname", "Choose a hostname for this device", cfg->host_name, HOSTNAME_LEN);
-  wifiManager.addParameter(&custom_hostname);
+//  WiFiManagerParameter custom_hostname("hostname", "Choose a hostname for this device", cfg->host_name, HOSTNAME_LEN);
+//  wifiManager.addParameter(&custom_hostname);
 
-  WiFiManagerParameter mqtt_server("mqtt_server", "MQTT Server", cfg->mqtt_server, 40);
-  wifiManager.addParameter(&mqtt_server);
-  WiFiManagerParameter mqtt_topic("mqtt_topic", "MQTT Topic", cfg->mqtt_topic, 40);
-  wifiManager.addParameter(&mqtt_topic);
+//  WiFiManagerParameter mqtt_server("mqtt_server", "MQTT Server", cfg->mqtt_server, 40);
+//  wifiManager.addParameter(&mqtt_server);
+//  WiFiManagerParameter mqtt_topic("mqtt_topic", "MQTT Topic", cfg->mqtt_topic, 40);
+//  wifiManager.addParameter(&mqtt_topic);
   
   #ifdef STATICIP
   IPAddress sip, sgw, ssn;
@@ -54,7 +56,7 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   byte mac[6];
   WiFi.macAddress(mac);
   char buf[32];
-  sprintf(buf, "%s %0x%0x%0x", cfg->wifi_config_name, mac[2], mac[1], mac[0]);
+  sprintf(buf, "%s %0x%0x%0x", PROJECT_NAME, mac[2], mac[1], mac[0]);
 
   if (!wifiManager.autoConnect(buf)) {
     // failed to connect and hit timeout
@@ -83,3 +85,4 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   return true;
 }
 
+#endif

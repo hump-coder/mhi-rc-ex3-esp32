@@ -1,3 +1,4 @@
+#if 0
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
 #include <config.h>
@@ -30,3 +31,4 @@ class RCWeb {
         void sendHomePage(String message, String header);
         void sendHomePage(String message, String header, int type);
 };
+#endif

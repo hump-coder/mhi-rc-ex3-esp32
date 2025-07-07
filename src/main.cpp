@@ -5,7 +5,7 @@
 #include <NTPClient.h>
 
 #include <wifi.h>
-#include <RCWeb.h>
+
 #include <config.h>
 #include <time.h>
 #include <rc3serial.h>
@@ -13,55 +13,235 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-WiFiUDP Udp;
 
-EspConfig cfg;
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
 
-
-RCWeb ws(HTTP_PORT);
-HTTPClient http;
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, NTP_SERVER, NTP_OFFSET, 1800000);
-
-WiFiServer localServer(1123);
-WiFiClient localClient;
+const char THING_NAME[] = DEVICE_NAME;
+const char INITIAL_AP_PASSWORD[] = "mhimhi";
+const char CONFIG_VERSION[] = "a1";
 
 
-#define MQTT_USER "rc3user"
-#define MQTT_PASS "pass"
+char mqttServer[32] = MQTT_SERVER;
+char mqttPort[6] = MQTT_PORT;
+char mqttUser[32] = MQTT_USER;
+char mqttPass[32] = MQTT_PASSWORD;
+char baseTopic[80] = DEVICE_NAME;
+char haBaseTopic[64];
 
-WiFiClient espClient;
-PubSubClient mqtt(espClient);
+void wifiConnected();
 
 
 
-void ota(char *host_name) {
-    ArduinoOTA.setPort(8266);
-    ArduinoOTA.setHostname(host_name);
-    ArduinoOTA.onStart([]() {
-        Serial.println("Start");
-    });
-    ArduinoOTA.onEnd([]() {
-        Serial.println("\nEnd");
-    });
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
-    ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-        else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-    ArduinoOTA.begin();
+// void publishZoneState(uint8_t zone) {
+//     char topic[64];
+//     snprintf(topic, sizeof(topic), "%s/zone%u/state", haBaseTopic, zone + 1);
+//     mqttClient.publish(topic, zoneState[zone] ? "ON" : "OFF", true);
+// }
+
+// void publishZoneName(uint8_t zone) {
+//     char topic[64];
+//     snprintf(topic, sizeof(topic), "%s/zone%u/name", haBaseTopic, zone + 1);
+//     String n("ffffuuuu");
+//     mqttClient.publish(topic, ZONE_NAMES[zone], true);
+// }
+
+// void publishAllStates() {
+//     for (uint8_t i = 0; i < numZones; ++i) {
+//         publishZoneState(i);
+//     }
+// }
+
+// void publishAllZoneNames() {
+//     for (uint8_t i = 0; i < numZones; ++i) {
+//         publishZoneName(i);
+//     }
+// }
+
+void mqttLog(String logMessage) {
+
+  char mbuf[2048];
+  sprintf(mbuf, "%s/log", BASE_TOPIC);
+
+  mqttClient.publish(mbuf, logMessage.c_str());
+  Serial.println(logMessage); // optional, also print to local serial
 }
 
+
+
+void sendDiscovery() {
+  mqttLog("Sending discovery messages:");
+
+  char topic[128];
+  snprintf(topic, sizeof(topic), "homeassistant/switch/%s/power/config", THING_NAME);
+  char payload[1024];
+
+
+  //
+  // Power on/off
+  //
+
+  const char *item = "power";
+
+  snprintf(payload, sizeof(payload), "{\"name\":\"%s\",\"command_topic\":\"%s/%s/set\",\"state_topic\":\"%s/%s/state\",\"unique_id\":\"%s_%s\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\"}", item, haBaseTopic, item, haBaseTopic, item, THING_NAME, item);
+    
+  
+  mqttLog(payload);
+  mqttClient.publish(topic, payload, true);
+
+
+snprintf(topic, sizeof(topic), "homeassistant/climate/%s/config", THING_NAME);
+snprintf(payload, sizeof(payload),
+  "{"
+    "\"name\": \"%s\","
+    "\"uniq_id\": \"%s_climate\","
+    "\"mode_cmd_t\": \"%s/mode/set\","
+    "\"mode_stat_t\": \"%s/mode/state\","
+    "\"modes\": [\"off\", \"cool\", \"dry\", \"heat\", \"fan_only\", \"auto\"],"
+    "\"temp_cmd_t\": \"%s/temp/set\","
+    "\"temp_stat_t\": \"%s/temp/state\","
+    "\"min_temp\": 16,"
+    "\"max_temp\": 30,"
+    "\"temp_step\": 0.5,"
+    "\"curr_temp_t\": \"%s/temperature/current\","
+    "\"avty_t\": \"%s/status\","
+    "\"pl_avail\": \"online\","
+    "\"pl_not_avail\": \"offline\","
+    "%s"
+  "}",
+  THING_NAME,
+  THING_NAME,
+  haBaseTopic, haBaseTopic,
+  haBaseTopic, haBaseTopic,
+  haBaseTopic,
+  haBaseTopic,
+  MQTT_DEVICE
+);
+
+mqttLog(payload);
+
+mqttClient.publish(topic, payload, true);
+
+//
+// Fan speed: 0 - 4
+//
+snprintf(topic, sizeof(topic), "homeassistant/number/%s/fan_speed/config", THING_NAME);
+snprintf(payload, sizeof(payload),
+  "{"
+    "\"name\": \"Fan Speed\","
+    "\"command_topic\": \"%s/speed/set\","
+    "\"state_topic\": \"%s/speed/state\","
+    "\"unique_id\": \"%s_fan_speed\","
+    "\"min\": 0,"
+    "\"max\": 4,"
+    "\"step\": 1,"
+    "\"mode\": \"box\","
+    "%s"
+  "}",
+  haBaseTopic, haBaseTopic,
+  THING_NAME,
+  MQTT_DEVICE
+);
+
+
+mqttLog(payload);
+
+mqttClient.publish(topic, payload, true);
+
+
+snprintf(topic, sizeof(topic), "homeassistant/number/%s/set_temp/config", THING_NAME);
+snprintf(payload, sizeof(payload),
+  "{"
+    "\"name\": \"Target Temperature\","
+    "\"command_topic\": \"%s/temp/set\","
+    "\"state_topic\": \"%s/temp/state\","
+    "\"unique_id\": \"%s_set_temp\","
+    "\"min\": 16,"
+    "\"max\": 30,"
+    "\"step\": 1,"
+    "\"mode\": \"box\","
+    "%s"
+  "}",
+  haBaseTopic, haBaseTopic,
+  THING_NAME,
+  MQTT_DEVICE
+);
+
+
+mqttLog(payload);
+
+mqttClient.publish(topic, payload, true);
+
+snprintf(topic, sizeof(topic), "homeassistant/number/%s/delay_off/config", THING_NAME);
+snprintf(payload, sizeof(payload),
+  "{"
+    "\"name\": \"Delay Off Hours\","
+    "\"command_topic\": \"%s/delayOffHours/set\","
+    "\"state_topic\": \"%s/delayOffHours/state\","
+    "\"unique_id\": \"%s_delay_off\","
+    "\"min\": 1,"
+    "\"max\": 12,"
+    "\"step\": 1,"
+    "\"mode\": \"box\","
+    "%s"
+  "}",
+  haBaseTopic, haBaseTopic,
+  THING_NAME,
+  MQTT_DEVICE
+);
+
+
+mqttLog(payload);
+
+mqttClient.publish(topic, payload, true);
+  
+}
+
+
+
+void mqttCallback(char *topic, byte *payload, unsigned int length) {
+    String msg;
+    for (unsigned int i = 0; i < length; ++i) {
+        msg += (char)payload[i];
+    }
+    mqttLog((String("Got MQTT message payload ['") +msg + String("'")).c_str());
+
+    //mqttLog("Message received [");
+    // DEBUG_PRINT(topic);
+    // DEBUG_PRINT("] ");
+    // DEBUG_PRINTLN(msg);
+    // String t(topic);
+    // String prefix = String(haBaseTopic) + "/zone";
+    // if (t.startsWith(prefix) && t.endsWith("/set")) {
+    //     int zone = t.substring(prefix.length(), t.length() - 4).toInt();
+    //     if (zone >= 1 && zone <= numZones) {
+    //         bool newState = msg.equalsIgnoreCase("ON") || msg.equalsIgnoreCase("OPEN");
+    //         zoneState[zone - 1] = newState;
+    //         stateChanged = true;
+    //         lastChangeTime = millis();
+    //         applyZones();
+    //     }
+    // }
+}
+
+///
+///
+///
+
+#if 0 // excluded original code, keep here for reference.
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+    String msg;
+    
+    for (unsigned int i = 0; i < length; ++i) {
+        msg += (char)payload[i];
+    }
+
+    // mqttLog((String("Got MQTT message payload ['") +msg + String("'")).c_str());
+
 
     DynamicJsonBuffer jsonBuffer;
-    JsonObject& root = jsonBuffer.parseObject(payload);
+    JsonObject& root = jsonBuffer.parseObject(msg);
 
     Settings s = {
         .power = 0xff, 
@@ -70,12 +250,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         .speed = 0xff
     };
 
+
+    if(1)
+    {
+
     if (!root.success()) {
         // JSON parsing failed
         char mbuf[50];
-        sprintf(mbuf, "%s/status", cfg.mqtt_topic);
+        sprintf(mbuf, "%s/status", BASE_TOPIC);
         mqtt.publish(mbuf, "parse_fail", false);
         jsonBuffer.clear();
+
+        mqttLog("parse fail");
+
         return;
     } 
 
@@ -83,6 +270,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 
     if (root.containsKey("speed")) {
+      //  mqttLog("Root contains speed!");
+
         s.speed = root["speed"];
     }
 
@@ -120,9 +309,42 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 
     if ((s.speed & s.power & s.mode) != 0xFF && s.degrees != 0xFFFF) {
+        mqttLog("SETTING CLIMATE VALUES ON UNIT!");
         setClimate(s);
         delay(100);
         serialFlush();
+    }
+    else
+    {
+        if(s.power != 0xff)
+        {
+          setPowerOn(s.power);
+          delay(100);
+          serialFlush();
+        }
+
+        if(s.mode != 0xff)
+        {
+          setFanSpeed(s.speed);
+          delay(100);
+          serialFlush();            
+        }
+
+        if(s.speed != 0xff)
+        {
+          setFanSpeed(s.speed);
+          delay(100);
+          serialFlush();
+        }
+
+        if(s.degrees != 0xFFFF)
+        {
+            setTemp(s.degrees);
+            delay(100);
+            serialFlush();
+        }
+
+       // mqttLog("NOT SETTING VALUES!");
     }
 
     if (root.containsKey("delayOffHours")) {
@@ -131,11 +353,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         delay(100);
         serialFlush();
     }
+    }
+    mqttLog("calling getStatus then checking if serial is available");
 
     getStatus();
     delay(200);
 
     if(Serial.available()){
+        mqttLog("Serial is available.");
+
         size_t len = Serial.available();
         char rbuf[len+1];
         Serial.readBytes(rbuf, len);
@@ -144,7 +370,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         for (uint8_t i=1; i<len; i++) {
           if (sbuflen) {
             if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127) { // ascii printable
-            sbuf[sbuflen++]=rbuf[i];
+              sbuf[sbuflen++]=rbuf[i];
             }
           }
           else {
@@ -155,7 +381,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
         sbuf[sbuflen]='\0';
         char mbuf[50];
-        sprintf(mbuf, "%s/status", cfg.mqtt_topic);
+        sprintf(mbuf, "%s/status", BASE_TOPIC);
 
         if (sbuf[4]=='1') {
             char pwr = sbuf[13];
@@ -204,103 +430,134 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
     }
     
+
+    mqttLog("Finished MQTT message.");
+
     jsonBuffer.clear();
 
 }
 
+#endif
 
 
+void connectToWifi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    ArduinoOTA.setHostname(BASE_TOPIC);
+    ArduinoOTA.begin();
+
+    Serial.printf("\nWiFi connected: %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("IOT Thing name: %s\n", BASE_TOPIC);
+
+}
+
+void connectToMqtt_old_unused()
+{
+    static unsigned long t_connect = 0;
+
+    //   Serial.printf("mqtt NOT CONNECTED\n");
+    delay(1000);
+    unsigned long t_now = millis();
+    Serial.printf("mqtt will attemp connection in: %ld]\n", t_now - t_connect);
+    if (t_now - t_connect > 5000)
+    {
+        // Attempting MQTT connection...
+        digitalWrite(13, HIGH);
+        Serial.printf("mqtt attempting connection\n");
+        if (mqttClient.connect(BASE_TOPIC, MQTT_USER, MQTT_PASSWORD))
+        {
+            Serial.printf("mqtt CONNECTED\n");
+            // connected
+            char mbuf[50];
+            sprintf(mbuf, "%s/status", BASE_TOPIC);
+            mqttClient.publish(mbuf, "connected", false);
+            mqttClient.subscribe(BASE_TOPIC);
+        }
+        else
+        {
+            // failed
+            Serial.printf("mqtt FAILEDn");
+        }
+        digitalWrite(13, LOW);
+        t_connect = t_now;
+    }
+}
+
+
+bool connectToMqtt() {
+
+    static unsigned long lastMqttAttempt = 0;
+
+    if (mqttClient.connected()) return true;
+
+    unsigned long now = millis();
+    if (now - lastMqttAttempt < 1000) {
+        return false; // limit reconnection attempts
+    }
+    lastMqttAttempt = now;
+
+    
+    if (mqttClient.connect(THING_NAME, mqttUser, mqttPass)) {
+    
+        String sub = String(haBaseTopic) + "/+/set";
+        mqttClient.subscribe(sub.c_str());
+        sendDiscovery();
+    //    publishAllStates();
+    //    publishAllZoneNames();
+        return true;
+    } else {
+      //  DEBUG_PRINT("failed, rc=");
+      //  DEBUG_PRINTLN(mqttClient.state());
+        return false;
+    }
+}
 
 void setup() {
 
-    // EspConfig cfg;
-    uint8_t reset = cfg.initEspConfig();
-
-    if (!setupWifi(&cfg, reset))
-        return;
-
-    ota(cfg.host_name);
-    timeClient.begin();
-    ws.configureServer(&cfg);
-
-    Serial.begin(38400,SERIAL_8E1);
-
-    localServer.begin();
-    localServer.setNoDelay(true);
-
-    mqtt.setServer(cfg.mqtt_server, 1883);
-    mqtt.setCallback(mqttCallback);
-
-
-}
-
-void loop() {
-
-    ArduinoOTA.handle();
-    uint8_t reconfigure = ws.handleClient();
-
-    if (reconfigure) {
-        cfg.resetConfig();
-        reconfigure=0;
-        delay(5000);
-        ESP.restart();
-        delay(1000);
-    }
-
-    static unsigned long t_connect=0;
-    if (!mqtt.connected()) {
-      unsigned long t_now=millis();
-      if (t_now - t_connect > 5000) {
-        // Attempting MQTT connection...
-        digitalWrite(13, HIGH); 
-        if (mqtt.connect(cfg.mqtt_topic, MQTT_USER, MQTT_PASS)) {
-          // connected
-            char mbuf[50];
-            sprintf(mbuf, "%s/status", cfg.mqtt_topic);
-            mqtt.publish(mbuf, "connected", false);
-            mqtt.subscribe(cfg.mqtt_topic);
-        } else {
-          // failed
-        }
-        digitalWrite(13, LOW); 
-        t_connect=t_now;
-      }
-    }
-    else {
-      mqtt.loop();
-    }
-
-
-    timeClient.update();
-
-    if (localServer.hasClient()){
-        if (!localClient.connected()){
-        if(localClient) localClient.stop();
-        localClient = localServer.available();
-        }
-    }
-        
-    //check a client for data
-    if (localClient && localClient.connected()){
-        if(localClient.available()){
-        size_t len = localClient.available();
-        uint8_t sbuf[len];
-        localClient.readBytes(sbuf, len);
-        Serial.write(sbuf, len);      
-        }
-    }
-
-    //check UART for data
-    if(Serial.available()){
-        size_t len = Serial.available();
-        uint8_t sbuf[len];
-        Serial.readBytes(sbuf, len);
-        if (localClient && localClient.connected()){
-        localClient.write(sbuf, len);
-        }
-    }
+    Serial.begin(74880);
+    //Serial.begin(38400,SERIAL_8E1);
     
+    connectToWifi();
+
+    delay(100);
+
+    Serial.println("Starting MQTT server");
+
+    mqttClient.setServer(mqttServer, atoi(mqttPort));
+    mqttClient.setCallback(mqttCallback);
+
+    Serial.println("Setup complete");
+
 }
 
+void loop()
+{
+    ArduinoOTA.handle();
 
+    if (!mqttClient.connected())
+    {
+        connectToMqtt();
+    }
+    else
+    {
+        mqttClient.loop();
+    }
 
+    // check UART for data
+    // if (Serial.available())
+    // {
+    //     size_t len = Serial.available();
+    //     uint8_t sbuf[len];
+    //     Serial.readBytes(sbuf, len);
+    //     if (localClient && localClient.connected())
+    //     {
+    //         localClient.write(sbuf, len);
+    //     }
+    // }
+}

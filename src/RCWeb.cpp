@@ -1,3 +1,4 @@
+#if 0
 #include <FS.h>
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
@@ -296,3 +297,4 @@ uint8_t RCWeb::handleClient() {
 void RCWeb::stop() {
   server.stop();
 }
+#endif

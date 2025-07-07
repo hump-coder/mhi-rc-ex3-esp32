@@ -1,11 +1,16 @@
+#if 0
 #include <FS.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
 #include <config.h>
 #include <wifi.h>
 
+
+
+#define CONFIG_FILENAME "/config_x.json"
+
 bool EspConfig::resetConfig() {
-    return SPIFFS.remove("/config.json");
+    return SPIFFS.remove(CONFIG_FILENAME);
 }
 
 bool EspConfig::saveConfig() {
@@ -23,7 +28,7 @@ bool EspConfig::saveConfig() {
     #endif
 
 
-    File configFile = SPIFFS.open("/config.json", "w");
+    File configFile = SPIFFS.open(CONFIG_FILENAME, "w");
     if (!configFile) {
       Serial.println("failed to open config file for writing");
       return false;
@@ -58,10 +63,10 @@ bool EspConfig::initEspConfig() {
 
     if (SPIFFS.begin()) {
         Serial.println("mounted file system");
-        if (SPIFFS.exists("/config.json")) {
+        if (SPIFFS.exists(CONFIG_FILENAME)) {
         //file exists, reading and loading
         Serial.println("reading config file");
-        File configFile = SPIFFS.open("/config.json", "r");
+        File configFile = SPIFFS.open(CONFIG_FILENAME, "r");
         if (configFile) {
             Serial.println("opened config file");
             size_t size = configFile.size();
@@ -102,3 +107,5 @@ bool EspConfig::initEspConfig() {
     }
     return true;
 }
+
+#endif
