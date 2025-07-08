@@ -190,22 +190,23 @@ void sendDiscovery() {
   char payload[1024];
 
 
-  //
-  // Power on/off
-  //
+  // //
+  // // Power on/off
+  // //
 
-  const char *item = "power";
+  // const char *item = "power";
 
-  snprintf(payload, sizeof(payload), "{\"name\":\"%s\",\"command_topic\":\"%s/%s/set\",\"state_topic\":\"%s/%s/state\",\"unique_id\":\"%s_%s\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\"}", item, haBaseTopic, item, haBaseTopic, item, THING_NAME, item);
+  // snprintf(payload, sizeof(payload), "{\"name\":\"%s\",\"command_topic\":\"%s/%s/set\",\"state_topic\":\"%s/%s/state\",\"unique_id\":\"%s_%s\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\"}", item, haBaseTopic, item, haBaseTopic, item, THING_NAME, item);
     
   
-  mqttLog(payload);
-  mqttClient.publish(topic, payload, true);
+  // mqttLog(payload);
+  // mqttClient.publish(topic, payload, true);
 
 
 snprintf(topic, sizeof(topic), "homeassistant/climate/%s/config", THING_NAME);
 snprintf(payload, sizeof(payload),
   "{"
+    "%s,"
     "\"name\": \"%s\","
     "\"uniq_id\": \"%s_climate\","
     "\"mode_cmd_t\": \"%s/mode/set\","
@@ -219,16 +220,15 @@ snprintf(payload, sizeof(payload),
     "\"curr_temp_t\": \"%s/temperature/current\","
     "\"avty_t\": \"%s/status\","
     "\"pl_avail\": \"online\","
-    "\"pl_not_avail\": \"offline\","
-    "%s"
+    "\"pl_not_avail\": \"offline\""
   "}",
+  MQTT_DEVICE,
   THING_NAME,
   THING_NAME,
   haBaseTopic, haBaseTopic,
   haBaseTopic, haBaseTopic,
   haBaseTopic,
-  haBaseTopic,
-  MQTT_DEVICE
+  haBaseTopic
 );
 
 mqttLog(payload);
@@ -241,6 +241,7 @@ mqttClient.publish(topic, payload, true);
 snprintf(topic, sizeof(topic), "homeassistant/number/%s/fan_speed/config", THING_NAME);
 snprintf(payload, sizeof(payload),
   "{"
+    "%s,"
     "\"name\": \"Fan Speed\","
     "\"command_topic\": \"%s/speed/set\","
     "\"state_topic\": \"%s/speed/state\","
@@ -248,12 +249,11 @@ snprintf(payload, sizeof(payload),
     "\"min\": 0,"
     "\"max\": 4,"
     "\"step\": 1,"
-    "\"mode\": \"box\","
-    "%s"
+    "\"mode\": \"box\""    
   "}",
-  haBaseTopic, haBaseTopic,
-  THING_NAME,
-  MQTT_DEVICE
+  MQTT_DEVICE,
+  haBaseTopic, haBaseTopic, 
+  THING_NAME
 );
 
 
@@ -265,6 +265,7 @@ mqttClient.publish(topic, payload, true);
 snprintf(topic, sizeof(topic), "homeassistant/number/%s/set_temp/config", THING_NAME);
 snprintf(payload, sizeof(payload),
   "{"
+    "%s,"
     "\"name\": \"Target Temperature\","
     "\"command_topic\": \"%s/temp/set\","
     "\"state_topic\": \"%s/temp/state\","
@@ -272,12 +273,11 @@ snprintf(payload, sizeof(payload),
     "\"min\": 16,"
     "\"max\": 30,"
     "\"step\": 1,"
-    "\"mode\": \"box\","
-    "%s"
+    "\"mode\": \"box\""
   "}",
+  MQTT_DEVICE,
   haBaseTopic, haBaseTopic,
-  THING_NAME,
-  MQTT_DEVICE
+  THING_NAME
 );
 
 
@@ -288,6 +288,7 @@ mqttClient.publish(topic, payload, true);
 snprintf(topic, sizeof(topic), "homeassistant/number/%s/delay_off/config", THING_NAME);
 snprintf(payload, sizeof(payload),
   "{"
+    "%s,"
     "\"name\": \"Delay Off Hours\","
     "\"command_topic\": \"%s/delayOffHours/set\","
     "\"state_topic\": \"%s/delayOffHours/state\","
@@ -295,12 +296,11 @@ snprintf(payload, sizeof(payload),
     "\"min\": 1,"
     "\"max\": 12,"
     "\"step\": 1,"
-    "\"mode\": \"box\","
-    "%s"
+    "\"mode\": \"box\""    
   "}",
+  MQTT_DEVICE,
   haBaseTopic, haBaseTopic,
-  THING_NAME,
-  MQTT_DEVICE
+  THING_NAME
 );
 
 

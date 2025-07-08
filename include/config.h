@@ -4,7 +4,7 @@
 
 #define MQTT_DEVICE \
     "\"device\": {" \
-      "\"identifiers\": [esp8266_hvac_controller]," \
+      "\"identifiers\": [\"esp8266_hvac_controller\"]," \
       "\"name\": \"HVAC Controller\"," \
       "\"manufacturer\": \"HumpTech\"," \
       "\"model\": \"ESP8266-MHI-RC-1\"," \
