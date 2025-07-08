@@ -203,24 +203,24 @@ void sendDiscovery() {
   // mqttClient.publish(topic, payload, true);
 
 
-snprintf(topic, sizeof(topic), "homeassistant/climate/%s/config", THING_NAME);
-snprintf(payload, sizeof(payload),
+  snprintf(topic, sizeof(topic), "homeassistant/climate/%s/config", THING_NAME);
+  snprintf(payload, sizeof(payload),
   "{"
     "%s,"
     "\"name\": \"%s\","
-    "\"uniq_id\": \"%s_climate\","
-    "\"mode_cmd_t\": \"%s/mode/set\","
-    "\"mode_stat_t\": \"%s/mode/state\","
+    "\"unique_id\": \"%s_climate\","
+    "\"mode_command_topic\": \"%s/mode/set\","
+    "\"mode_state_topic\": \"%s/mode/state\","
     "\"modes\": [\"off\", \"cool\", \"dry\", \"heat\", \"fan_only\", \"auto\"],"
-    "\"temp_cmd_t\": \"%s/temp/set\","
-    "\"temp_stat_t\": \"%s/temp/state\","
+    "\"temperature_command_topic\": \"%s/temp/set\","
+    "\"temperature_state_topic\": \"%s/temp/state\","
     "\"min_temp\": 16,"
     "\"max_temp\": 30,"
     "\"temp_step\": 0.5,"
-    "\"curr_temp_t\": \"%s/temperature/current\","
-    "\"avty_t\": \"%s/status\","
-    "\"pl_avail\": \"online\","
-    "\"pl_not_avail\": \"offline\""
+    "\"current_temperature_topic\": \"%s/temperature/current\","
+    "\"availability_topic\": \"%s/status\","
+    "\"payload_available\": \"online\","
+    "\"payload_not_available\": \"offline\""
   "}",
   MQTT_DEVICE,
   THING_NAME,
@@ -229,7 +229,7 @@ snprintf(payload, sizeof(payload),
   haBaseTopic, haBaseTopic,
   haBaseTopic,
   haBaseTopic
-);
+  );
 
 mqttLog(payload);
 
