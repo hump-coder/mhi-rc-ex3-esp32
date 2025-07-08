@@ -29,6 +29,17 @@ char mqttPass[32] = MQTT_PASSWORD;
 char baseTopic[80] = DEVICE_NAME;
 char haBaseTopic[64];
 
+struct ClimateState {
+    bool power;
+    uint8_t mode;   // 0=auto,1=dry,2=cool,3=fan_only,4=heat
+    uint8_t speed;  // 0-4
+    float targetTemp;
+    float currentTemp;
+} state = {false, 0, 0, 21.0f, 21.0f};
+
+unsigned long lastStatusUpdate = 0;
+unsigned long lastStatusRequest = 0;
+
 void wifiConnected();
 
 
@@ -65,6 +76,108 @@ void mqttLog(String logMessage) {
 
   mqttClient.publish(mbuf, logMessage.c_str());
   Serial.println(logMessage); // optional, also print to local serial
+}
+
+const char* modeToString(uint8_t m) {
+  switch(m) {
+    case 0: return "auto";
+    case 1: return "dry";
+    case 2: return "cool";
+    case 3: return "fan_only";
+    case 4: return "heat";
+  }
+  return "off";
+}
+
+uint8_t modeFromString(const String &s) {
+  if (s.equalsIgnoreCase("auto")) return 0;
+  if (s.equalsIgnoreCase("dry")) return 1;
+  if (s.equalsIgnoreCase("cool")) return 2;
+  if (s.equalsIgnoreCase("fan") || s.equalsIgnoreCase("fan_only")) return 3;
+  if (s.equalsIgnoreCase("heat")) return 4;
+  return 0xFF;
+}
+
+void publishState() {
+  char topic[128];
+  char buf[16];
+
+  snprintf(topic, sizeof(topic), "%s/power/state", haBaseTopic);
+  mqttClient.publish(topic, state.power ? "ON" : "OFF", true);
+
+  snprintf(topic, sizeof(topic), "%s/mode/state", haBaseTopic);
+  mqttClient.publish(topic, modeToString(state.mode), true);
+
+  snprintf(topic, sizeof(topic), "%s/speed/state", haBaseTopic);
+  snprintf(buf, sizeof(buf), "%u", state.speed);
+  mqttClient.publish(topic, buf, true);
+
+  snprintf(topic, sizeof(topic), "%s/temp/state", haBaseTopic);
+  dtostrf(state.targetTemp, 0, 1, buf);
+  mqttClient.publish(topic, buf, true);
+
+  snprintf(topic, sizeof(topic), "%s/temperature/current", haBaseTopic);
+  dtostrf(state.currentTemp, 0, 1, buf);
+  mqttClient.publish(topic, buf, true);
+}
+
+bool parseStatus(const char *s) {
+  if (!s || strlen(s) < 32) return false;
+  if (s[4] != '1') return false;
+
+  char tbuf[3];
+  strncpy(tbuf, &s[30], 2);
+  tbuf[2] = '\0';
+  int number = strtol(tbuf, NULL, 16);
+  float temp = number * 0.5f;
+
+  state.power = (s[13] == '1');
+
+  switch(s[17]) {
+    case '1': state.mode = 1; break;
+    case '2': state.mode = 2; break;
+    case '3': state.mode = 3; break;
+    case '4': state.mode = 4; break;
+    default: state.mode = 0; break;
+  }
+
+  switch(s[21]) {
+    case '0': state.speed = 1; break;
+    case '1': state.speed = 2; break;
+    case '2': state.speed = 3; break;
+    case '6': state.speed = 4; break;
+    default: state.speed = 0; break;
+  }
+
+  state.targetTemp = temp;
+  state.currentTemp = temp;
+
+  lastStatusUpdate = millis();
+  publishState();
+  return true;
+}
+
+void handleSerial() {
+  if (!Serial.available()) return;
+  size_t len = Serial.available();
+  char rbuf[len+1];
+  Serial.readBytes(rbuf, len);
+  char sbuf[len+1];
+  int sl = 0;
+  for (uint8_t i = 1; i < len; ++i) {
+    if (sl) {
+      if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127) sbuf[sl++] = rbuf[i];
+    } else if (rbuf[i] == 'R') {
+      sbuf[sl++] = rbuf[i];
+    }
+  }
+  sbuf[sl] = '\0';
+  parseStatus(sbuf);
+}
+
+void requestStatus() {
+  getStatus();
+  lastStatusRequest = millis();
 }
 
 
@@ -204,24 +317,46 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     for (unsigned int i = 0; i < length; ++i) {
         msg += (char)payload[i];
     }
-    mqttLog((String("Got MQTT message payload ['") +msg + String("'")).c_str());
+    String t(topic);
+    String base = String(haBaseTopic) + "/";
+    if (!t.startsWith(base)) return;
+    String cmd = t.substring(base.length());
 
-    //mqttLog("Message received [");
-    // DEBUG_PRINT(topic);
-    // DEBUG_PRINT("] ");
-    // DEBUG_PRINTLN(msg);
-    // String t(topic);
-    // String prefix = String(haBaseTopic) + "/zone";
-    // if (t.startsWith(prefix) && t.endsWith("/set")) {
-    //     int zone = t.substring(prefix.length(), t.length() - 4).toInt();
-    //     if (zone >= 1 && zone <= numZones) {
-    //         bool newState = msg.equalsIgnoreCase("ON") || msg.equalsIgnoreCase("OPEN");
-    //         zoneState[zone - 1] = newState;
-    //         stateChanged = true;
-    //         lastChangeTime = millis();
-    //         applyZones();
-    //     }
-    // }
+    if (cmd == "power/set") {
+        bool on = msg.equalsIgnoreCase("ON") || msg == "1";
+        setPowerOn(on ? 1 : 0);
+        state.power = on;
+    } else if (cmd == "mode/set") {
+        if (msg.equalsIgnoreCase("off")) {
+            setPowerOn(0);
+            state.power = false;
+        } else {
+            uint8_t m = modeFromString(msg);
+            if (m != 0xFF) {
+                setMode(m);
+                state.mode = m;
+                state.power = true;
+            }
+        }
+    } else if (cmd == "temp/set") {
+        float tval = msg.toFloat();
+        state.targetTemp = tval;
+        setTemp((uint16_t)(tval * 10));
+    } else if (cmd == "speed/set") {
+        uint8_t sp = msg.toInt();
+        if (sp <= 4) {
+            state.speed = sp;
+            setFanSpeed(sp);
+        }
+    } else if (cmd == "delayOffHours/set") {
+        uint8_t h = msg.toInt();
+        if (h >= 1 && h <= 12) {
+            setOffTimer(h);
+        }
+    }
+
+    publishState();
+    requestStatus();
 }
 
 ///
@@ -503,13 +638,14 @@ bool connectToMqtt() {
     lastMqttAttempt = now;
 
     
-    if (mqttClient.connect(THING_NAME, mqttUser, mqttPass)) {
-    
+    String willTopic = String(haBaseTopic) + "/status";
+    if (mqttClient.connect(THING_NAME, mqttUser, mqttPass,
+                           willTopic.c_str(), 0, true, "offline")) {
+
         String sub = String(haBaseTopic) + "/+/set";
         mqttClient.subscribe(sub.c_str());
         sendDiscovery();
-    //    publishAllStates();
-    //    publishAllZoneNames();
+        mqttClient.publish(willTopic.c_str(), "online", true);
         return true;
     } else {
       //  DEBUG_PRINT("failed, rc=");
@@ -526,11 +662,14 @@ void setup() {
     connectToWifi();
 
     delay(100);
+    strncpy(haBaseTopic, BASE_TOPIC, sizeof(haBaseTopic));
 
     Serial.println("Starting MQTT server");
 
     mqttClient.setServer(mqttServer, atoi(mqttPort));
     mqttClient.setCallback(mqttCallback);
+
+    requestStatus();
 
     Serial.println("Setup complete");
 
@@ -549,15 +688,9 @@ void loop()
         mqttClient.loop();
     }
 
-    // check UART for data
-    // if (Serial.available())
-    // {
-    //     size_t len = Serial.available();
-    //     uint8_t sbuf[len];
-    //     Serial.readBytes(sbuf, len);
-    //     if (localClient && localClient.connected())
-    //     {
-    //         localClient.write(sbuf, len);
-    //     }
-    // }
+    handleSerial();
+
+    if (millis() - lastStatusUpdate > 30000 && millis() - lastStatusRequest > 5000) {
+        requestStatus();
+    }
 }
