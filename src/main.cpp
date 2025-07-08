@@ -102,6 +102,26 @@ uint8_t modeFromString(const String &s) {
   return 0xFF;
 }
 
+const char* fanModeToString(uint8_t s) {
+  switch (s) {
+    case 0: return "auto";
+    case 1: return "1";
+    case 2: return "2";
+    case 3: return "3";
+    case 4: return "4";
+  }
+  return "auto";
+}
+
+uint8_t fanModeFromString(const String &s) {
+  if (s.equalsIgnoreCase("auto") || s == "0") return 0;
+  if (s == "1") return 1;
+  if (s == "2") return 2;
+  if (s == "3") return 3;
+  if (s == "4") return 4;
+  return 0xFF;
+}
+
 void publishState() {
   char topic[128];
   char buf[16];
@@ -115,6 +135,9 @@ void publishState() {
   snprintf(topic, sizeof(topic), "%s/speed/state", haBaseTopic);
   snprintf(buf, sizeof(buf), "%u", state.speed);
   mqttClient.publish(topic, buf, true);
+
+  snprintf(topic, sizeof(topic), "%s/fan_mode/state", haBaseTopic);
+  mqttClient.publish(topic, fanModeToString(state.speed), true);
 
   snprintf(topic, sizeof(topic), "%s/temp/state", haBaseTopic);
   dtostrf(state.targetTemp, 0, 1, buf);
@@ -225,8 +248,11 @@ void sendDiscovery() {
     "\"mode_command_topic\": \"%s/mode/set\","
     "\"mode_state_topic\": \"%s/mode/state\","
     "\"modes\": [\"off\", \"cool\", \"dry\", \"heat\", \"fan_only\", \"auto\"],"
-    "\"temperature_command_topic\": \"%s/temp/set\","
-    "\"temperature_state_topic\": \"%s/temp/state\","
+    "\"fan_mode_command_topic\": \"%s/fan_mode/set\","
+    "\"fan_mode_state_topic\": \"%s/fan_mode/state\","
+    "\"fan_modes\": [\"auto\", \"1\", \"2\", \"3\", \"4\"],"
+    "\"temperature_command_topic\": \"%s/temp/set\",
+    "\"temperature_state_topic\": \"%s/temp/state\",
     "\"min_temp\": 16,"
     "\"max_temp\": 30,"
     "\"temp_step\": 0.5,"
@@ -238,6 +264,7 @@ void sendDiscovery() {
   mqttDevice,
   THING_NAME,
   THING_NAME,
+  haBaseTopic, haBaseTopic,
   haBaseTopic, haBaseTopic,
   haBaseTopic, haBaseTopic,
   haBaseTopic,
@@ -370,6 +397,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     } else if (cmd == "speed/set") {
         uint8_t sp = msg.toInt();
         if (sp <= 4) {
+            state.speed = sp;
+            setFanSpeed(sp);
+            serialFlush();
+        }
+    } else if (cmd == "fan_mode/set") {
+        uint8_t sp = fanModeFromString(msg);
+        if (sp != 0xFF && sp <= 4) {
             state.speed = sp;
             setFanSpeed(sp);
             serialFlush();
