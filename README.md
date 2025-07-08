@@ -49,7 +49,7 @@ Fetch the unit state with the status command and set the state with a JSON paylo
 ## Home Assistant
 
 The firmware announces itself via MQTT discovery so it will appear automatically as a climate entity when the MQTT integration is enabled. Configure the broker settings in `config-private.h`.
-Discovery uses the full MQTT property names as expected by recent Home Assistant releases (2025.7+).
+Discovery uses the full MQTT property names as expected by recent Home Assistant releases (2025.7+). The discovery JSON is quite large so set `MQTT_MAX_PACKET_SIZE` to at least `1152` in `platformio.ini`.
 
 Each attribute is published under `<BASE_TOPIC>/<item>`. With the default `BASE_TOPIC` of `mhi-ac-rc-ex3-1` the following topics are used:
 
