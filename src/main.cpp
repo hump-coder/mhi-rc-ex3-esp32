@@ -40,6 +40,7 @@ struct ClimateState {
 
 unsigned long lastStatusUpdate = 0;
 unsigned long lastStatusRequest = 0;
+unsigned long lastUpdate = 0;
 
 void wifiConnected();
 
@@ -78,6 +79,8 @@ void mqttLog(String logMessage) {
   mqttClient.publish(mbuf, logMessage.substring(0,128).c_str());
   Serial.println(logMessage); // optional, also print to local serial
 }
+
+
 
 const char* modeToString(uint8_t m) {
   switch(m) {
@@ -182,6 +185,16 @@ void requestStatus() {
 }
 
 
+
+void updateStatus()
+{
+  serialFlush();
+  requestStatus();
+  delay(200);
+  handleSerial();
+  serialFlush();
+  lastUpdate = millis();
+}
 
 void sendDiscovery() {
   mqttLog("Sending discovery messages:");
@@ -336,11 +349,15 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     } else if (cmd == "mode/set") {
         if (msg.equalsIgnoreCase("off")) {
             setPowerOn(0);
+            serialFlush();
             state.power = false;
         } else {
             uint8_t m = modeFromString(msg);
-            if (m != 0xFF) {
+            if (m != 0xFF) {              
+                setPowerOn(1);
+                serialFlush();
                 setMode(m);
+                serialFlush();
                 state.mode = m;
                 state.power = true;
             }
@@ -349,21 +366,24 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
         float tval = msg.toFloat();
         state.targetTemp = tval;
         setTemp((uint16_t)(tval * 10));
+        serialFlush();
     } else if (cmd == "speed/set") {
         uint8_t sp = msg.toInt();
         if (sp <= 4) {
             state.speed = sp;
             setFanSpeed(sp);
+            serialFlush();
         }
     } else if (cmd == "delayOffHours/set") {
         uint8_t h = msg.toInt();
         if (h >= 1 && h <= 12) {
             setOffTimer(h);
+            serialFlush();
         }
     }
 
     publishState();
-    requestStatus();
+    updateStatus();
 }
 
 ///
@@ -631,7 +651,6 @@ void connectToMqtt_old_unused()
     }
 }
 
-
 bool connectToMqtt() {
 
     static unsigned long lastMqttAttempt = 0;
@@ -653,6 +672,9 @@ bool connectToMqtt() {
         mqttClient.subscribe(sub.c_str());
         sendDiscovery();
         mqttClient.publish(willTopic.c_str(), "online", true);
+
+        updateStatus();
+
         return true;
     } else {
       //  DEBUG_PRINT("failed, rc=");
@@ -661,10 +683,11 @@ bool connectToMqtt() {
     }
 }
 
+
 void setup() {
 
-    Serial.begin(74880);
-    //Serial.begin(38400,SERIAL_8E1);
+    //Serial.begin(74880);
+    Serial.begin(38400,SERIAL_8E1);
     
     connectToWifi();
 
@@ -674,13 +697,14 @@ void setup() {
     Serial.println("Starting MQTT server");
 
     mqttClient.setServer(mqttServer, atoi(mqttPort));
-    mqttClient.setCallback(mqttCallback);
-
-    requestStatus();
-
+    mqttClient.setCallback(mqttCallback);   
+    lastUpdate = millis(); 
     Serial.println("Setup complete");
 
 }
+
+
+
 
 void loop()
 {
@@ -695,9 +719,26 @@ void loop()
         mqttClient.loop();
     }
 
-    handleSerial();
-
-    if (millis() - lastStatusUpdate > 30000 && millis() - lastStatusRequest > 5000) {
-        requestStatus();
+    if(mqttClient.connected() && millis() - lastUpdate > 30000)
+    {
+      updateStatus();      
     }
+
+
+   // serialFlush();
+
+    // if(millis() - lastSerialUpdate > 3000)
+    // {
+    //   handleSerial();
+    //   lastSerialUpdate = millis();
+    // }
+
+    // if (millis() - lastStatusUpdate > 5000 && millis() - lastStatusRequest > 5000) {
+    // //  requestStatus();
+    //   delay(200);
+    // //  handleSerial();
+
+    //   //handleSerial();
+    //  // publishState();
+    // }
 }

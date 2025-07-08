@@ -2,6 +2,7 @@
 #include <rc3serial.h>
 
 void serialFlush(){
+  delay(100);
   while(Serial.available() > 0) {
     Serial.read();
     yield();
