@@ -45,3 +45,16 @@ Fetch the unit state with the status command and set the state with a JSON paylo
     "delayOffHours": 1-12
 }
 ```
+
+## Home Assistant
+
+The firmware announces itself via MQTT discovery so it will appear automatically as a climate entity when the MQTT integration is enabled. Configure the broker settings in `config-private.h`.
+
+Each attribute is published under `<BASE_TOPIC>/<item>`. With the default `BASE_TOPIC` of `mhi-ac-rc-ex3-1` the following topics are used:
+
+- `mhi-ac-rc-ex3-1/power/state` (`.../set` to change)
+- `mhi-ac-rc-ex3-1/mode/state`
+- `mhi-ac-rc-ex3-1/temp/state`
+- `mhi-ac-rc-ex3-1/speed/state`
+
+Updates from the wall controller are pushed over MQTT so Home Assistant always reflects the latest state.
