@@ -1,4 +1,4 @@
-# WiFi Control for Mitsubishi RC-EX3 Air Conditioner
+# WiFi Control for Mitsubishi (MHI) RC-EX3 Air Conditioner
 
 This project adds MQTT and HTTP control to the Mitsubishi RC-EX3 wall controller using an ESP-12 (ESP8266). It is based on the excellent work from [mcchas/rc-ex3-esp](https://github.com/mcchas/rc-ex3-esp). Many thanks to the original author for providing the foundation.
 
