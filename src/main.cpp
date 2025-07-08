@@ -27,6 +27,7 @@ char mqttPort[6] = MQTT_PORT;
 char mqttUser[32] = MQTT_USER;
 char mqttPass[32] = MQTT_PASSWORD;
 char baseTopic[80] = DEVICE_NAME;
+char mqttDevice[256] = MQTT_DEVICE;
 char haBaseTopic[64];
 
 struct ClimateState {
@@ -71,10 +72,10 @@ void wifiConnected();
 
 void mqttLog(String logMessage) {
 
-  char mbuf[2048];
-  sprintf(mbuf, "%s/log", BASE_TOPIC);
+  char mbuf[128];
+  snprintf(mbuf,sizeof(mbuf), "%s/log", haBaseTopic);
 
-  mqttClient.publish(mbuf, logMessage.c_str());
+  mqttClient.publish(mbuf, logMessage.substring(0,128).c_str());
   Serial.println(logMessage); // optional, also print to local serial
 }
 
@@ -185,9 +186,8 @@ void requestStatus() {
 void sendDiscovery() {
   mqttLog("Sending discovery messages:");
 
-  char topic[128];
-  snprintf(topic, sizeof(topic), "homeassistant/switch/%s/power/config", THING_NAME);
-  char payload[1024];
+  char topic[128];  
+  char payload[1152];
 
 
   // //
@@ -195,14 +195,14 @@ void sendDiscovery() {
   // //
 
   // const char *item = "power";
-
+  //snprintf(topic, sizeof(topic), "homeassistant/switch/%s/power/config", THING_NAME);
   // snprintf(payload, sizeof(payload), "{\"name\":\"%s\",\"command_topic\":\"%s/%s/set\",\"state_topic\":\"%s/%s/state\",\"unique_id\":\"%s_%s\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\"}", item, haBaseTopic, item, haBaseTopic, item, THING_NAME, item);
     
   
   // mqttLog(payload);
   // mqttClient.publish(topic, payload, true);
 
-
+  mqttLog("climate: 1");
   snprintf(topic, sizeof(topic), "homeassistant/climate/%s/config", THING_NAME);
   snprintf(payload, sizeof(payload),
   "{"
@@ -222,7 +222,7 @@ void sendDiscovery() {
     "\"payload_available\": \"online\","
     "\"payload_not_available\": \"offline\""
   "}",
-  MQTT_DEVICE,
+  mqttDevice,
   THING_NAME,
   THING_NAME,
   haBaseTopic, haBaseTopic,
@@ -230,10 +230,15 @@ void sendDiscovery() {
   haBaseTopic,
   haBaseTopic
   );
+  
+  mqttLog(String("climate: 2 to topic: ") + topic);
 
-mqttLog(payload);
+  mqttClient.publish(topic, payload, true);
 
-mqttClient.publish(topic, payload, true);
+  mqttLog("climate: 3");
+  mqttLog(payload);
+
+  mqttLog("climate: 4");
 
 //
 // Fan speed: 0 - 4
@@ -251,16 +256,16 @@ snprintf(payload, sizeof(payload),
     "\"step\": 1,"
     "\"mode\": \"box\""    
   "}",
-  MQTT_DEVICE,
+  mqttDevice,
   haBaseTopic, haBaseTopic, 
   THING_NAME
 );
 
 
-mqttLog(payload);
+
 
 mqttClient.publish(topic, payload, true);
-
+mqttLog(payload);
 
 snprintf(topic, sizeof(topic), "homeassistant/number/%s/set_temp/config", THING_NAME);
 snprintf(payload, sizeof(payload),
@@ -275,15 +280,16 @@ snprintf(payload, sizeof(payload),
     "\"step\": 1,"
     "\"mode\": \"box\""
   "}",
-  MQTT_DEVICE,
+  mqttDevice,
   haBaseTopic, haBaseTopic,
   THING_NAME
 );
 
 
-mqttLog(payload);
+
 
 mqttClient.publish(topic, payload, true);
+mqttLog(payload);
 
 snprintf(topic, sizeof(topic), "homeassistant/number/%s/delay_off/config", THING_NAME);
 snprintf(payload, sizeof(payload),
@@ -298,16 +304,17 @@ snprintf(payload, sizeof(payload),
     "\"step\": 1,"
     "\"mode\": \"box\""    
   "}",
-  MQTT_DEVICE,
+  mqttDevice,
   haBaseTopic, haBaseTopic,
   THING_NAME
 );
 
 
-mqttLog(payload);
+
 
 mqttClient.publish(topic, payload, true);
-  
+mqttLog(payload);
+
 }
 
 
