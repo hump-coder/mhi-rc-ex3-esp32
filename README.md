@@ -57,5 +57,6 @@ Each attribute is published under `<BASE_TOPIC>/<item>`. With the default `BASE_
 - `mhi-ac-rc-ex3-1/mode/state`
 - `mhi-ac-rc-ex3-1/temp/state`
 - `mhi-ac-rc-ex3-1/speed/state`
+- `mhi-ac-rc-ex3-1/fan_mode/state`
 
 Updates from the wall controller are pushed over MQTT so Home Assistant always reflects the latest state.
