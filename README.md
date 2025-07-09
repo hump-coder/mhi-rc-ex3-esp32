@@ -42,7 +42,7 @@ Place the regulator inside the enclosure and press the jumper pins into the vias
 
 [<img src="images/rc3-regulator-power.png" width=50%/>](image.png)
 
-[<img src="images/capacitor.png" width=50%/>](image.png)
+[<img src="images/capacitor.jpg" width=50%/>](image.png)
 
 
 ## Building
