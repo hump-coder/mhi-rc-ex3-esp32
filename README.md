@@ -22,15 +22,21 @@ Place the regulator inside the enclosure and press the jumper pins into the vias
 
 [<img src="images/rc3-regulator-power.png" width=50%/>](image.png)
 
-## Updating firmware
 
-After building, update using `esptool.py`:
+## Building
 
-`python3 espota.py --ip=<ESP8266 IP Address> --host_ip=0.0.0.0 --port=8266 --host_port=8267 --file=./.pio/build/d1_mini/firmware.bin --debug --progres`
+Open Build and Install using [PlatformIO](https://platformio.org).
+
+## OTA Updating firmware
+
+From the project open a platformIO terminal and, update using (replacing the device name with how you've configured it in `config-private.h`):
+
+`pio run -t upload --upload-port mhi-ac-rc-ex3-1.local`
 
 ## Setup
 
-When uninitialised the device advertises a WiFi Manager AP. Use it to set your network credentials, MQTT topic and server details (`http://192.168.4.1`).
+Integrates into Home Assistant via MQTT discovery (set your MQTT user and pass in `config-private.h`)
+
 
 Fetch the unit state with the status command and set the state with a JSON payload:
 
@@ -38,7 +44,7 @@ Fetch the unit state with the status command and set the state with a JSON paylo
 {
     "power": true/false,
     "mode": cool/dry/heat/fan/auto
-    "speed": 0/1/2/3/4
+    "fan_mode": auto/1/2/3/4
     "temp": 16.0-30.0
     "delayOffHours": 1-12
 }
@@ -54,7 +60,6 @@ Each attribute is published under `<BASE_TOPIC>/<item>`. With the default `BASE_
 - `mhi-ac-rc-ex3-1/power/state` (`.../set` to change)
 - `mhi-ac-rc-ex3-1/mode/state`
 - `mhi-ac-rc-ex3-1/temp/state`
-- `mhi-ac-rc-ex3-1/speed/state`
 - `mhi-ac-rc-ex3-1/fan_mode/state`
 
 Updates from the wall controller are pushed over MQTT so Home Assistant always reflects the latest state.
