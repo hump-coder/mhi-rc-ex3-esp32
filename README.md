@@ -2,6 +2,8 @@
 
 This project adds MQTT and HTTP control to the Mitsubishi RC-EX3 wall controller using an ESP-12 (ESP8266). It is based on the excellent work from [mcchas/rc-ex3-esp](https://github.com/mcchas/rc-ex3-esp). Many thanks to the original author for providing the foundation.
 
+Note: This project will work equally well on any of the ESP32 micro controllers.
+
 ## Building the hardware
 
 Build and flash the firmware to the ESP module. Connect VCC, GND, TX and RX to the panel by inserting bent jumper pins into the through-hole vias. Power the ESP-12 with a 3.3&nbsp;V regulator.
@@ -25,10 +27,6 @@ Place the regulator inside the enclosure and press the jumper pins into the vias
 After building, update using `esptool.py`:
 
 `python3 espota.py --ip=<ESP8266 IP Address> --host_ip=0.0.0.0 --port=8266 --host_port=8267 --file=./.pio/build/d1_mini/firmware.bin --debug --progres`
-
-## Using the original software
-
-The device exposes a TCP socket on port 1123 which works with the Mitsubishi PC-Remote tool (PC-RemoteSetup.exe). This can help reverse additional functions.
 
 ## Setup
 
