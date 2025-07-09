@@ -42,8 +42,11 @@ Place the regulator inside the enclosure and press the jumper pins into the vias
 
 [<img src="images/rc3-regulator-power.png" width=50%/>](image.png)
 
-[<img src="images/capacitor.jpg" width=50%/>](image.png)
+## Capacitor
 
+The ESP device can draw too much current at times so I suggest a 470uf 10v capacitor accross the ESP between ground and the power-in (3.3v or 5v depending on your setup) as shown here:
+
+[<img src="images/capacitor.jpg" width=50%/>](image.png)
 
 ## Building
 
