@@ -20,7 +20,11 @@ uint8_t checksum(char *data, uint16_t length) {
 void setFanSpeed(uint8_t speed) {
 
   uint8_t val;
+  uint8_t def= 0x07;
+
   switch(speed) {
+      case 0: val=def;
+      break;
       case 1: val=0;
       break;
       case 2: val=0x01;
@@ -29,8 +33,10 @@ void setFanSpeed(uint8_t speed) {
       break;
       case 4: val=0x06;
       break;
-      default: val=0x07;
+      default: val=def;
   }
+
+  
 
   char buf[100];
   uint8_t len = sprintf(buf, "RSSL12FF0001FF02FF03%.2x04FF05FF06FF0FFF43FF", val);
