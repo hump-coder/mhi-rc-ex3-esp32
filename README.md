@@ -10,7 +10,7 @@ The main objective of this project is for integration of my MHI (Mitsubishi Heav
 
 ### Compatible devices
 
-As this adapter is implemented using the target's RC-EX3 remote conrol it should be compatible with all MHI HVAC that use the RC-EX3 remote.
+As this adapter is implemented using the HVAC RC-EX3 remote control and should be compatible with all MHI HVAC that use the RC-EX3 remote.
 
 This includes models in the following families:
 
