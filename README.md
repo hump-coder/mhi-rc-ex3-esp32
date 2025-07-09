@@ -1,6 +1,6 @@
-# WiFi Control for Mitsubishi (MHI) RC-EX3 Air Conditioner from Home Assistant
+# WiFi Control for Mitsubishi (MHI) RC-EX3 and RC-EXZ3A Air Conditioner from Home Assistant
 
-This project adds MQTT over Wifi control to the Mitsubishi RC-EX3 wall controller using an ESP-12 (ESP8266). It is based on the excellent work from [mcchas/rc-ex3-esp](https://github.com/mcchas/rc-ex3-esp). Many thanks to the original author for providing the foundation.
+This project adds MQTT over Wifi control to the Mitsubishi RC-EX3/RC-EXZ3A wall controller using an ESP-12 (ESP8266). It is based on the excellent work from [mcchas/rc-ex3-esp](https://github.com/mcchas/rc-ex3-esp). Many thanks to the original author for providing the foundation.
 
 Note: This project will work equally well on any of the ESP32 micro controllers.
 
@@ -21,6 +21,7 @@ This includes models in the following families:
 * FDUM
 * FDEN
 * FDT
+* FDE
 * FDUA (the device I'm using)
 
 ## Building the hardware
