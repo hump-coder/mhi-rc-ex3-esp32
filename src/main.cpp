@@ -1,17 +1,16 @@
+#include <time.h>
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoOTA.h>
 #include <NTPClient.h>
-
 #include <wifi.h>
-
-#include <config.h>
-#include <time.h>
-#include <rc3serial.h>
-
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+
+#include "config.h"
+#include "rc3serial.h"
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -400,9 +399,9 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
       serialFlush();
     }
   }
-
-  publishState();
+  
   updateStatus();
+  publishState();
 }
 
 ///
@@ -443,8 +442,7 @@ bool connectToMqtt()
   lastMqttAttempt = now;
 
   String willTopic = String(haBaseTopic) + "/status";
-  if (mqttClient.connect(THING_NAME, mqttUser, mqttPass,
-                         willTopic.c_str(), 0, true, "offline"))
+  if (mqttClient.connect(THING_NAME, mqttUser, mqttPass, willTopic.c_str(), 0, true, "offline"))
   {
 
     String sub = String(haBaseTopic) + "/+/set";

@@ -7,3 +7,5 @@
 .pio
 .vscode/ipch
 include/config-private.h
+include/config-private-south.h
+include/config-private-north.h
