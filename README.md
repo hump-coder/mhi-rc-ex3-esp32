@@ -1,3 +1,9 @@
+# New HA ESPHome Builder implementation
+
+For my use I've replaced this project with an ESPHome Builder implementation that removes the need for platformIO.
+
+The ESPHome Builder project can be found here: [hump-coder/mhi-rc-ex3-esphome](https://github.com/hump-coder/mhi-rc-ex3-esphome)
+
 # WiFi Control for Mitsubishi (MHI) RC-EX3 and RC-EXZ3A Air Conditioner from Home Assistant
 
 This project adds MQTT over Wifi control to the Mitsubishi RC-EX3/RC-EXZ3A wall controller using an ESP-12 (ESP8266). It is based on the excellent work from [mcchas/rc-ex3-esp](https://github.com/mcchas/rc-ex3-esp). Many thanks to the original author for providing the foundation.
